@@ -182,7 +182,7 @@ do_restart_services() {
 
 do_homebridge_update() {
   printf "Updating Homebridge, please wait...\n"
-  npm install -g --unsafe-perm homebridge@latest homebridge-config-ui-x@latest
+  npm install -g homebridge@latest homebridge-config-ui-x@latest
   whiptail --msgbox "Homebridge is up-to-date." 10 60 1
   do_restart_services
 }
@@ -201,24 +201,18 @@ do_nodejs_update() {
     echo "Updating Node.js to $LTS..."
 
     PREFIX=$(npm -g prefix || echo "/usr/local")
-
-    tempDir=$(mktemp -d)
-    echo "Downloading to $tempDir/node-$LTS-linux-armv6l.tar.gz ..."
-    curl -Lf# -o "$tempDir/node-$LTS-linux-armv6l.tar.gz" "https://unofficial-builds.nodejs.org/download/release/$LTS/node-$LTS-linux-armv6l.tar.gz"
-
-    if [ $? -ne 0 ]; then
-      echo "Failed to download node-$LTS-linux-armv6l.tar.gz. See logs above."
-      exit 1
-    fi
-
-    echo "Cleaning up old version of npm..."
     sudo rm -rf "$PREFIX/lib/node_modules/npm"
-
-    echo "Extracting node-$LTS-linux-armv6l.tar.gz to $PREFIX ..."
-    sudo tar xz -f "$tempDir/node-$LTS-linux-armv6l.tar.gz" -C /usr/local --strip-components=1 --no-same-owner
-
-    echo "Removing $tempDir/node-$LTS-linux-armv6l.tar.gz ..."
-    sudo rm -rf "$tempDir/node-$LTS-linux-armv6l.tar.gz"
+    
+    case "$(dpkg-architecture -q DEB_TARGET_ARCH)" in
+    arm64)
+      curl -Lsf "https://nodejs.org/dist/$LTS/node-$LTS-linux-arm64.tar.xz" | \
+        sudo tar xJf - -C /usr/local --strip-components=1 --no-same-owner
+      ;;
+    armhf)
+      curl -Lsf "https://unofficial-builds.nodejs.org/download/release/$LTS/node-$LTS-linux-armv6l.tar.gz" | \
+        sudo tar xzf - -C /usr/local --strip-components=1 --no-same-owner
+      ;;
+    esac
 
     echo "Node.js $(node -v)"
     echo "npm $(npm -v)"
@@ -353,43 +347,24 @@ EOL
   fi
 }
 
-do_install_adguard_home() {
-  if [ -e /etc/systemd/system/AdGuardHome.service ]; then
-      whiptail --title "Remove AdGuard Home" --yesno "AdGuard Home is already installed.\n\nWould you like to UNINSTALL AdGuard Home?" 20 60 1
-      RET=$?
-      if [ $RET -eq 0 ]; then
-        systemctl stop AdGuardHome
-      	systemctl disable AdGuardHome
-	      rm -rf /etc/systemd/system/AdGuardHome.service
-        rm -rf /opt/AdGuardHome
-	      systemctl daemon-reload
-        whiptail --title "Success" --msgbox "AdGuard Home has been uninstalled." 20 60 1
-      	printf "\n"
-      fi
-  else
-    whiptail --title "Warning" --yesno "This will install the AdGuard Home software which uses the following ports:\n\n* 3000\n\nAre you sure you want to continue?" 20 60 1
-    RET=$?
-    if [ $RET -eq 0 ]; then
-      rm -rf /tmp/adguardhome
-      mkdir -p /tmp/adguardhome
-      cd /tmp/adguardhome
-      wget https://static.adguard.com/adguardhome/release/AdGuardHome_linux_armv6.tar.gz
-      tar xvf AdGuardHome_linux_armv6.tar.gz -C /opt
-      rm -rf /tmp/adguardhome
-      cd /opt/AdGuardHome
-      ./AdGuardHome -s install
-      if [ $? -eq 0 ]; then
-        # Complete
-        ADGUARD_WEB=$(get_web_addresses http 3000 | sed 's/\x1b\[[0-9;]*m//g')
-        whiptail --title "Success" --msgbox "AdGuard Home has been installed.\n\nFinish setting up AdGuard Home via:\n\n$ADGUARD_WEB" 20 60 1
-        printf "\n"
-        exit 0
-      else
-        whiptail --title "Error" --msgbox "AdGuard Home failed to install correctly. Review log above." 20 60 1
-        printf "\n"
-        exit 0
-      fi
-    fi
+do_install_unifi() {
+  whiptail --title "Warning" --yesno "This will install the UniFi Controller software which uses the following ports:\n\n* 8080\n* 8443\n* 8880\n* 8853\n* 6798\n* 27117\n\nAre you sure you want to continue?" 20 60 1
+  RET=$?
+  if [ $RET -eq 0 ]; then
+    # add unifi repo
+    echo 'deb http://www.ubnt.com/downloads/unifi/debian stable ubiquiti' | sudo tee /etc/apt/sources.list.d/100-ubnt-unifi.list
+    # add unifi gpg key
+    wget -O /etc/apt/trusted.gpg.d/unifi-repo.gpg https://dl.ubnt.com/unifi/unifi-repo.gpg
+    # install packages
+    apt update
+    apt install -y openjdk-8-jre-headless haveged
+    apt install -y unifi
+
+    printf "\n${BOLD}UniFi Controller has been installed${NC}\n"
+    printf "Access the UniFi Controller in your browser by going to:\n"
+    get_web_addresses https 8443
+    printf "\n"
+    exit 0
   fi
 }
 
@@ -405,7 +380,7 @@ do_install_deconz() {
       isRaspbee="1"
 
       # Install deps
-      apt update --allow-releaseinfo-change
+      apt update
       sudo apt install -y i2c-tools build-essential raspberrypi-kernel-headers
 
       # WiringPi (Pi4 Only)
@@ -462,13 +437,12 @@ do_install_deconz() {
     wget -O - http://phoscon.de/apt/deconz.pub.key | sudo apt-key add -
 
     # Configure the APT repository for deCONZ
-    # remove -beta when https://forum.phoscon.de/t/please-create-a-repo-for-debian-11-bullseye/432 is resolved
     sudo sh -c "echo 'deb http://phoscon.de/apt/deconz \
-            $(lsb_release -cs)-beta main' > \
+            $(lsb_release -cs) main' > \
             /etc/apt/sources.list.d/deconz.list"
 
     # Update APT package list
-    apt update --allow-releaseinfo-change
+    apt update
 
     # Install deCONZ
     apt install -y deconz
@@ -487,7 +461,7 @@ EOL
 
     systemctl stop deconz-gui
     systemctl disable deconz-gui
-
+    
     systemctl enable deconz
     systemctl restart deconz
 
@@ -499,8 +473,8 @@ EOL
     if [ "$isRaspbee" = "1" ]; then
       if [ "$isRaspbee2" = "1" ]; then
         whiptail --title "Final Steps" --msgbox "You need to reboot your device to complete installation.\n\nOnce you have reboot you need to configure the RTC module by running:\n\nsudo hwclock --systohc\nsudo hwclock --verbose\n\nSee the RaspBee II install guide for further instructions: https://phoscon.de/en/raspbee2/install#raspbian" 20 60 1
-      else
-        whiptail --title "Final Steps" --msgbox "You need to reboot your device to complete installation." 20 60 1
+      else 
+         whiptail --title "Final Steps" --msgbox "You need to reboot your device to complete installation." 20 60 1
       fi
       whiptail --title "Reboot Required" --yesno "Would you like to reboot now?" 20 60 2
       if [ $? -eq 0 ]; then # yes
@@ -535,7 +509,7 @@ do_install_desktop_and_vnc() {
       else
         whiptail --title "Warning" --yesno "The Raspbian Desktop will now be installed.\n\nThis may take between 5 and 45 minutes to complete depending on your device." 20 60 2 --no-button "Cancel" --yes-button "Continue"
         if [ $? -eq 0 ]; then
-          apt update --allow-releaseinfo-change
+          apt update
           apt install -y raspberrypi-ui-mods
         else
           return 0;
@@ -543,7 +517,7 @@ do_install_desktop_and_vnc() {
       fi
 
       # install and setup VNC
-      if is_installed realvnc-vnc-server || (apt update --allow-releaseinfo-change && apt install -y realvnc-vnc-server); then
+      if is_installed realvnc-vnc-server || (apt update && apt install -y realvnc-vnc-server); then
         cat > /etc/systemd/system/vncserver-pi.service <<EOL
 [Unit]
 Description=VNC Virtual Desktop Service
@@ -597,22 +571,22 @@ EOL
 
 do_extra_packages() {
   FUN=$(whiptail --title "Homebridge Raspbian Configuration Tool (hb-config)" --menu "Advanced Options" $WT_HEIGHT $WT_WIDTH $WT_MENU_HEIGHT --cancel-button Back --ok-button Select \
-    "A0 AdGuard Home" "Install / Uninstall AdGuard Home" \
     "A1 Pi-hole" "Install / Reconfigure Pi-hole" \
     "A2 Node-RED" "Install / Update Node-RED" \
-    "A3 deCONZ / Phoscon" "Install / Update to manage your ConBee or RaspBee device" \
-    "A4 RealVNC Server" "Enable / Disable desktop access over VNC" \
+    "A3 UniFi Controller" "Install / Update the Ubiquiti UniFi Controller software" \
+    "A4 deCONZ / Phoscon" "Install / Update to manage your ConBee or RaspBee device" \
+    "A5 RealVNC Server" "Enable / Disable desktop access over VNC" \
     3>&1 1>&2 2>&3)
   RET=$?
   if [ $RET -eq 1 ]; then
     return 0
   elif [ $RET -eq 0 ]; then
     case "$FUN" in
-      A0\ *) do_install_adguard_home ;;
       A1\ *) do_install_pihole ;;
       A2\ *) do_install_nodered ;;
-      A3\ *) do_install_deconz ;;
-      A4\ *) do_install_desktop_and_vnc ;;
+      A3\ *) do_install_unifi ;;
+      A4\ *) do_install_deconz ;;
+      A5\ *) do_install_desktop_and_vnc ;;
       *) whiptail --msgbox "Programmer error: unrecognized option" 20 60 1 ;;
     esac || whiptail --msgbox "There was an error running option $FUN" 20 60 1
   fi
@@ -755,7 +729,7 @@ do_configure_raspbian() {
 
 do_update() {
   tempDir=$(mktemp -d)
-  scriptUrl=https://raw.githubusercontent.com/homebridge/homebridge-raspbian-image/latest/stage3_homebridge/01-homebridge/files/hb-config
+  scriptUrl=https://raw.githubusercontent.com/homebridge/homebridge-raspbian-image/master/stage3_homebridge/01-homebridge/files/hb-config
 
   # download the update to a temporary directory
   scriptUrl=$scriptUrl?$(date --iso-8601)
@@ -822,7 +796,7 @@ if [ "$INTERACTIVE" = True ]; then
         "4 Extra Packages" "Optional packages, eg. Pi-Hole, Node-RED, UniFi Controller" \
         "5 Nginx Options" "Configure Homebridge Nginx settings" \
         "6 Configure OS" "Open the Raspbian Configuration Tool" \
-        "7 Networking" "Open the NetworkManager UI" \
+        "7 Networking" "Open the the NetworkManager UI" \
         "8 Update" "Update this tool to the latest version" \
         "9 About" "Information about this configuration tool" \
         3>&1 1>&2 2>&3)
@@ -834,7 +808,7 @@ if [ "$INTERACTIVE" = True ]; then
         "4 Extra Packages" "Optional packages, eg. Pi-Hole, Node-RED, UniFi Controller" \
         "5 Nginx Options" "Configure Homebridge Nginx settings" \
         "6 Configure OS" "Open the Raspbian Configuration Tool" \
-        "7 Networking" "Open the NetworkManager UI" \
+        "7 Networking" "Open the the NetworkManager UI" \
         "8 Update" "Update this tool to the latest version" \
         "9 About" "Information about this configuration tool" \
         3>&1 1>&2 2>&3)
