@@ -92,7 +92,7 @@ if __name__ == "__main__":
     if url == "MISSING_URL":
         url = os.path.basename(zip_local)
 
-    output_path = os.path.join(workspace_path, "rpi-image-repo.json")
+    output_path = os.path.join(workspace_path, "rpi-image-repo-arm64.json")
 
     json_out = {"name": name,
                 "description": description,

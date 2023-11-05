@@ -34,7 +34,7 @@ jobs:
         export IMAGE_SHA256_CHECKSUM=$(shasum -a 256 deploy/image_Raspbian-Homebridge.zip | awk '{print $1}')
         echo "$IMAGE_SHA256_CHECKSUM deploy/image_Raspbian-Homebridge.zip"
         echo ::set-output name=IMAGE_SHA256_CHECKSUM::${IMAGE_SHA256_CHECKSUM}
-    - name: Generate rpi-image-repo.json 
+    - name: Generate rpi-image-repo-arm64.json 
       id: generate_rpi-image-repo
       run: |
         sudo RPI_IMAGER_NAME="Homebridge" RPI_IMAGER_DESCRIPTION="Official Homebridge Raspberry Pi Image" RPI_IMAGER_ICON="https://user-images.githubusercontent.com/3979615/116509191-3c35f880-a906-11eb-9a7f-7cad7c2aa641.png" RPI_IMAGER_WEBSITE="https://github.com/homebridge/homebridge-raspbian-image/wiki/Getting-Started" ./make_rpi-imager-snipplet.py -u"https://github.com/homebridge/homebridge-raspbian-image/releases/download/${{ steps.get_version.outputs.VERSION }}/Raspbian-Homebridge-${{ steps.get_version.outputs.VERSION }}-arm64.zip"
@@ -77,15 +77,15 @@ jobs:
         asset_path: deploy/image_Raspbian-Homebridge.zip
         asset_name: Raspbian-Homebridge-${{ steps.get_version.outputs.VERSION }}-arm64.zip
         asset_content_type: application/zip
-    - name: Upload rpi-image-repo.json
+    - name: Upload rpi-image-repo-arm64.json
       id: upload-rpi-image-repo-json 
       uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: deploy/rpi-image-repo.json
-        asset_name: rpi-image-repo.json
+        asset_path: deploy/rpi-image-repo-arm64.json
+        asset_name: rpi-image-repo-arm64.json
         asset_content_type: application/json
 
     # cleanup
