@@ -8,11 +8,6 @@ on:
         description: 'Version / Tag (vx.x.x):'     
         required: true
 
-# The raspbian release is set here
-
-env:
-  RELEASE: bookworm
-
 jobs:
   build:
 
