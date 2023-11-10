@@ -20,11 +20,6 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - name: Get the version (git tag)
-      id: get_version
-      run: |
-        echo ${GITHUB_REF/refs\/tags\//}
-        echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
     - name: Install Dependencies
       run: |
        sudo apt-get update
