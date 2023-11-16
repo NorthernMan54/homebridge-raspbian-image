@@ -44,8 +44,11 @@ jobs:
             release: bookworm
             name: 32-bit
 
-    steps:
-      - uses: actions/checkout@v4
+      - name: Setup Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get --yes --no-install-recommends install binfmt-support qemu-user-static
+          docker run --rm --privileged multiarch/qemu-user-static:register --reset
 
 # f022813 aka 1.7.0
       - uses: usimd/pi-gen-action@f022813e54a67d9f8fe8a6a6d620a5da3739a632
@@ -157,7 +160,7 @@ jobs:
           username: pi
       
           # Print all output from pi-gen.
-          verbose-output: true
+          verbose-output: false
       
           # Wifi country code of default network to connect to.
           wpa-country: ''
