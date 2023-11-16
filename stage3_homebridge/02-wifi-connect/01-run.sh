@@ -37,7 +37,7 @@ systemctl daemon-reload
 systemctl enable wifi-connect
 systemctl enable NetworkManager
 #systemctl disable dhcpcd
-#systemctl disable dnsmasq
-#systemctl disable hostapd
+systemctl disable dnsmasq
+systemctl disable hostapd
 EOF
 
