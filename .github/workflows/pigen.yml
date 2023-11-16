@@ -52,11 +52,11 @@ jobs:
 
 # https://stackoverflow.com/questions/72444103/what-does-running-the-multiarch-qemu-user-static-does-before-building-a-containe
 
-      - name: Setup Dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get --yes --no-install-recommends install binfmt-support qemu-user-static
-          docker run --rm --privileged multiarch/qemu-user-static:register --reset
+#      - name: Setup Dependencies
+#        run: |
+#          sudo apt-get update
+#          sudo apt-get --yes --no-install-recommends install binfmt-support qemu-user-static
+#          docker run --rm --privileged multiarch/qemu-user-static:register --reset
 
 # f022813 aka 1.7.0
       - uses: usimd/pi-gen-action@f022813e54a67d9f8fe8a6a6d620a5da3739a632
