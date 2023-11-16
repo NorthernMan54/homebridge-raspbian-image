@@ -50,6 +50,8 @@ jobs:
 
       - uses: actions/checkout@v4
 
+# https://stackoverflow.com/questions/72444103/what-does-running-the-multiarch-qemu-user-static-does-before-building-a-containe
+
       - name: Setup Dependencies
         run: |
           sudo apt-get update
@@ -166,7 +168,7 @@ jobs:
           username: pi
       
           # Print all output from pi-gen.
-          verbose-output: false
+          verbose-output: true
       
           # Wifi country code of default network to connect to.
           wpa-country: ''
