@@ -45,7 +45,7 @@ jobs:
             release: bookworm
             name: 32bit
             devices: '["pi5-32bit", "pi4-32bit", "pi3-32bit", "pi2-32bit", "pi1-32bit"]'
- 
+
 # The build
 
     steps:
