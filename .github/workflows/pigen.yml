@@ -1,5 +1,5 @@
-name: Create Raspbian Homebridge Image using pi-gen
-run-name: Create Raspbian Homebridge Image ${{ github.event.inputs.version }} against ${{ github.ref_name }}
+name: test Image using pi-gen
+run-name: test Homebridge Image ${{ github.event.inputs.version }} against ${{ github.ref_name }}
 
 on:
   workflow_dispatch:
