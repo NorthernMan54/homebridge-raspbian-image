@@ -88,7 +88,7 @@ if __name__ == "__main__":
     release_date = date.today().strftime("%Y-%m-%d")
 
     devices=[]
-    devices = json.loads(handle_arg("DEVICES"))
+    devices = json.loads(handle_arg("RPI_IMAGER_DEVICES"))
 
  #   print("devices: ", devices)
     zip_local = glob.glob(os.path.join(workspace_path, "*.zip"))[0]
