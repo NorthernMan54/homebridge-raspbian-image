@@ -32,17 +32,19 @@ jobs:
       fail-fast: false
       matrix:
         name: [
-          64-bit,
-          32-bit
+          64bit,
+          32bit
         ]
         include:
           - pi-gen-version: arm64
             release: bookworm
-            name: 64-bit
+            name: 64bit
+            devices: ["pi5-64bit", "pi4-64bit", "pi3-64bit"]
 
           - pi-gen-version: master
             release: bookworm
-            name: 32-bit
+            name: 32bit
+            devices: ["pi5-32bit", "pi4-32bit", "pi3-32bit", "pi2-32bit", "pi1-32bit"]
 
 # The build
 
